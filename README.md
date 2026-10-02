@@ -4,6 +4,8 @@ UEFI reset for AMD iGPU VFIO passthrough: reset the Granite Ridge iGPU (1002:13C
 
 **Status: experimental.** Tested on an AMD Ryzen 9 9950X3D iGPU. Not tested on other hardware. Use at your own risk.
 
+AI disclosure: see [AI_DISCLOSURE.md](AI_DISCLOSURE.md).
+
 A UEFI driver, loaded from a PCI option ROM inside the VM, that runs before the AMD GOP driver
 on every VM boot (including reboots started inside Windows and boots after a forced stop).
 
