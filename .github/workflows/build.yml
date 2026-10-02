@@ -1,0 +1,47 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # edk2 commit the prebuilt AmdIgpuReset.rom was built from (see README)
+  EDK2_REF: 34b75da
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7 (node24)
+        with:
+          persist-credentials: false
+
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential nasm uuid-dev python3
+
+      - name: Fetch edk2
+        run: |
+          git clone --filter=blob:none https://github.com/tianocore/edk2 "$RUNNER_TEMP/edk2"
+          git -C "$RUNNER_TEMP/edk2" checkout "$EDK2_REF"
+          git -C "$RUNNER_TEMP/edk2" submodule update --init \
+            BaseTools/Source/C/BrotliCompress/brotli \
+            MdeModulePkg/Library/BrotliCustomDecompressLib/brotli \
+            MdePkg/Library/MipiSysTLib/mipisyst
+
+      - name: Build
+        run: src/build.sh "$RUNNER_TEMP/edk2"
+
+      - name: Check ROM
+        run: |
+          ls -l AmdIgpuReset.rom
+          # PCI option ROM signature 0x55 0xAA
+          test "$(head -c2 AmdIgpuReset.rom | xxd -p)" = "55aa"
+          sha256sum AmdIgpuReset.rom
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7 (node24)
+        with:
+          name: AmdIgpuReset.rom
+          path: AmdIgpuReset.rom
