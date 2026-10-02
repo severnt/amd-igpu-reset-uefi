@@ -36,6 +36,14 @@ Module options, e.g. in `/etc/modprobe.d/vfio.conf`:
 - `blacklist amdgpu` keeps the host from binding the iGPU, which means the host has no amdgpu driver for any AMD GPU.
 - Rebuild the initramfs after editing (distro-specific, e.g. `update-initramfs -u`, `mkinitcpio -P` or `dracut -f`).
 
+## VBIOS and GOP ROM
+
+- Both ROMs come from the AMD iGPU on your own CPU. This repo does not ship them.
+- How to obtain them (extract from the host's `/sys/firmware/acpi/tables/VFCT`, or use the prebuilt files that guide links to): see
+  [isc30/ryzen-gpu-passthrough-proxmox](https://github.com/isc30/ryzen-gpu-passthrough-proxmox).
+  That guide notes its prebuilt `AMDGopDriver.rom` might not be compatible with all hardware; if it fails, extract your own.
+- Use the VBIOS (e.g. `vbios_13C0.dat`) on the GPU function and the GOP ROM (`AMDGopDriver_*.rom`) concatenated after `AmdIgpuReset.rom` on the audio function, as below.
+
 ## Install
 
 1. Put the reset image in front of your GOP ROM (`AmdIgpuReset.rom` is built without the
