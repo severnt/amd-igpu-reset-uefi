@@ -2,7 +2,7 @@
 
 UEFI reset for AMD iGPU VFIO passthrough: reset the Granite Ridge iGPU (1002:13C0) from the VM's UEFI.
 
-**Status: experimental.** Tested on an AMD Ryzen 9 9950X3D iGPU. Not tested on other hardware. Use at your own risk.
+**Status: experimental.** Tested on an AMD Ryzen 9 9950X3D iGPU. Not tested on other hardware.
 
 AI disclosure: see [AI_DISCLOSURE.md](AI_DISCLOSURE.md).
 
@@ -12,8 +12,7 @@ on every VM boot (including reboots started inside Windows and boots after a for
 ## What it does
 
 - Reads the PSP mailbox. If it shows a ring left by a previous driver (`0x8001xxxx` or
-  `0x8002xxxx`), it runs the sequence validated from the host
-  (`igpu-mode2-reset.py --disallow-gfxoff --psp-destroy --mode2`):
+  `0x8002xxxx`), it runs the sequence validated from the host:
   GetSmuVersion -> DisallowGfxOff -> PSP destroy rings -> MODE2 reset.
 - Fresh host boot (`0x80000000`) or already reset (`0x80030000`): does nothing.
 - Set `ALWAYS_RESET` to 1 in `AmdIgpuResetDxe.c` to reset on every boot instead.
@@ -34,7 +33,6 @@ Module options, e.g. in `/etc/modprobe.d/vfio.conf`:
 
     blacklist amdgpu
 
-- As above, not sure all of these are needed.
 - `blacklist amdgpu` keeps the host from binding the iGPU, which means the host has no amdgpu driver for any AMD GPU.
 - Rebuild the initramfs after editing (distro-specific, e.g. `update-initramfs -u`, `mkinitcpio -P` or `dracut -f`).
 
@@ -64,9 +62,8 @@ Module options, e.g. in `/etc/modprobe.d/vfio.conf`:
    Plain QEMU: `-device vfio-pci,host=0000:10:00.1,romfile=/path/to/AmdIgpuReset+GOP.rom`
 
 3. Leave the VBIOS romfile on the GPU function (10:00.0) as it is.
-   RadeonResetBugFix stays uninstalled; no host hook is needed.
 
-## Full libvirt example (tested system)
+## libvirt example (tested system)
 
 Both iGPU functions are passed through. The GPU function gets the VBIOS, the audio function gets
 the combined reset + GOP ROM:
@@ -159,10 +156,6 @@ Expected lines:
 3. Shut Windows down, start the VM again: same.
 4. `virsh destroy`, start the VM again: same.
 
-## Roll back
-
-Point the romfile back at the original `AMDGopDriver_9950x3d.rom`.
-
 ## Repository layout
 
 - `AmdIgpuReset.rom`: prebuilt option ROM (no "last image" flag)
@@ -177,23 +170,10 @@ The ROM is written to the repo root. Needs edk2 with the submodules listed in `b
 The prebuilt `AmdIgpuReset.rom` came from edk2 master 34b75da (2026-10-02), GCC 13, RELEASE.
 sha256: `32c704bbc3ebd8b7b37c7f7b27a0d80daedfa73cd58e86dd8f33d88bd7100d97`
 
-## What has been verified (emulation and unit tests)
+## What has been verified
 
 - Builds with edk2 master and GCC 13 (`-Werror`).
-- QEMU 8.2 + Ubuntu OVMF 2024.02: the driver loads from the option ROM and the AMD GOP driver
-  loads from the second image (`drivers` lists it at ROM offset 0x4200). Same result with
-  Ubuntu's Secure Boot build (`OVMF_CODE_4M.secboot.fd`, `OVMF_VARS_4M.ms.fd`,
-  SecureBootEnable on).
-- Host unit test of the driver source against a mocked iGPU: skip on a clean PSP mailbox,
-  command order, bus master off during MODE2, config/attribute restore, late enumeration,
-  bounded waits when the SMU never answers.
-- Register offsets are identical to `igpu-mode2-reset.py`.
-- v0.2: the register BAR is located at runtime. edk2 numbers BARs logically (a 64-bit BAR
-  uses one index for two config registers, `PciParseBar()`), so PCI BAR5 is not PciIo index 5
-  on this iGPU. v0.1 used index 5 and read all-ones. Checked in QEMU against the AHCI
-  controller's BAR at config 0x24, and in the unit test with the iGPU's BAR layout.
-
-Real hardware: tested on a 9950X3D (see Status). Details of what was run and observed are not recorded here.
+- Real hardware: tested on a 9950X3D (see Status).
 
 ## Caveats
 
