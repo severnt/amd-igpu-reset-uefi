@@ -20,10 +20,21 @@ on every VM boot (including reboots started inside Windows and boots after a for
 
 Kernel command line used on the tested system:
 
-    vfio_pci.ids=1002:164e,1002:1640 vfio_pci.disable_vga=1 vfio_iommu_type1.allow_unsafe_interrupts=1 iommu=pt
+    vfio_pci.ids=1002:13c0,1002:1640 vfio_pci.disable_vga=1 vfio_iommu_type1.allow_unsafe_interrupts=1 iommu=pt
 
 - Not sure how much of this is required. Some of it may be unnecessary; remove options one at a time to find out.
-- `1002:164e` is the iGPU and `1002:1640` is its audio function on the tested system. Check yours with `lspci -nn`.
+- `1002:13c0` is the iGPU and `1002:1640` is its audio function on the tested system. Check yours with `lspci -nn`.
+
+Module options, e.g. in `/etc/modprobe.d/vfio.conf`:
+
+    options vfio_iommu_type1 allow_unsafe_interrupts=1
+    softdep drm pre: vfio-pci
+
+    blacklist amdgpu
+
+- As above, not sure all of these are needed.
+- `blacklist amdgpu` keeps the host from binding the iGPU, which means the host has no amdgpu driver for any AMD GPU.
+- Rebuild the initramfs after editing (distro-specific, e.g. `update-initramfs -u`, `mkinitcpio -P` or `dracut -f`).
 
 ## Install
 
@@ -55,7 +66,7 @@ the combined reset + GOP ROM:
       <source>
         <address domain='0x0000' bus='0x10' slot='0x00' function='0x0'/>
       </source>
-      <rom file='/var/lib/libvirt/images/vbios_164E.dat'/>
+      <rom file='/var/lib/libvirt/images/vbios_13C0.dat'/>
       <address type='pci' domain='0x0000' bus='0x01' slot='0x00' function='0x0' multifunction='on'/>
     </hostdev>
     <hostdev mode='subsystem' type='pci' managed='yes'>
