@@ -1,7 +1,8 @@
 ---
 disclosure-default: ai-generated
 models-used:
-  - Claude (exact model version not recorded)
+  - claude-opus-5-5
+  - claude-sonnet-5-5
 providers:
   - Anthropic
 scope: |
