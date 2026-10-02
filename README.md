@@ -2,7 +2,7 @@
 
 UEFI reset for AMD iGPU VFIO passthrough: reset the Granite Ridge iGPU (1002:13C0) from the VM's UEFI.
 
-**Status: experimental.** Not yet tested against the real iGPU inside a VM (see below). Use at your own risk.
+**Status: experimental.** Tested on an AMD Ryzen 9 9950X3D iGPU. Not tested on other hardware. Use at your own risk.
 
 A UEFI driver, loaded from a PCI option ROM inside the VM, that runs before the AMD GOP driver
 on every VM boot (including reboots started inside Windows and boots after a forced stop).
@@ -16,6 +16,15 @@ on every VM boot (including reboots started inside Windows and boots after a for
 - Fresh host boot (`0x80000000`) or already reset (`0x80030000`): does nothing.
 - Set `ALWAYS_RESET` to 1 in `AmdIgpuResetDxe.c` to reset on every boot instead.
 
+## Host setup
+
+Kernel command line used on the tested system:
+
+    vfio_pci.ids=1002:164e,1002:1640 vfio_pci.disable_vga=1 vfio_iommu_type1.allow_unsafe_interrupts=1 iommu=pt
+
+- Not sure how much of this is required. Some of it may be unnecessary; remove options one at a time to find out.
+- `1002:164e` is the iGPU and `1002:1640` is its audio function on the tested system. Check yours with `lspci -nn`.
+
 ## Install
 
 1. Put the reset image in front of your GOP ROM (`AmdIgpuReset.rom` is built without the
@@ -24,7 +33,7 @@ on every VM boot (including reboots started inside Windows and boots after a for
        cat AmdIgpuReset.rom AMDGopDriver_9950x3d.rom > AmdIgpuReset+GOP.rom
 
 2. Load `AmdIgpuReset+GOP.rom` on the device that loads the GOP ROM today
-   (typically the iGPU's audio function; adjust to your setup. libvirt:
+   (typically the iGPU's audio function; adjust to your setup). libvirt:
 
        <hostdev mode='subsystem' type='pci' managed='yes'>
          <source><address domain='0x0000' bus='0x10' slot='0x00' function='0x1'/></source>
@@ -35,6 +44,72 @@ on every VM boot (including reboots started inside Windows and boots after a for
 
 3. Leave the VBIOS romfile on the GPU function (10:00.0) as it is.
    RadeonResetBugFix stays uninstalled; no host hook is needed.
+
+## Full libvirt example (tested system)
+
+Both iGPU functions are passed through. The GPU function gets the VBIOS, the audio function gets
+the combined reset + GOP ROM:
+
+    <hostdev mode='subsystem' type='pci' managed='yes'>
+      <driver name='vfio'/>
+      <source>
+        <address domain='0x0000' bus='0x10' slot='0x00' function='0x0'/>
+      </source>
+      <rom file='/var/lib/libvirt/images/vbios_164E.dat'/>
+      <address type='pci' domain='0x0000' bus='0x01' slot='0x00' function='0x0' multifunction='on'/>
+    </hostdev>
+    <hostdev mode='subsystem' type='pci' managed='yes'>
+      <driver name='vfio'/>
+      <source>
+        <address domain='0x0000' bus='0x10' slot='0x00' function='0x1'/>
+      </source>
+      <rom file='/var/lib/libvirt/images/AMDGopDriver_13C0+reset.rom'/>
+      <address type='pci' domain='0x0000' bus='0x01' slot='0x00' function='0x1'/>
+    </hostdev>
+
+`<features>` used:
+
+    <features>
+      <acpi/>
+      <apic/>
+      <hyperv mode='custom'>
+        <relaxed state='on'/>
+        <vapic state='on'/>
+        <spinlocks state='on' retries='8191'/>
+        <vpindex state='on'/>
+        <runtime state='on'/>
+        <synic state='on'/>
+        <stimer state='on'/>
+        <vendor_id state='on' value='notavm'/>
+        <tlbflush state='on'>
+          <extended state='on'/>
+        </tlbflush>
+        <ipi state='on'/>
+        <avic state='on'/>
+      </hyperv>
+      <kvm>
+        <hidden state='on'/>
+      </kvm>
+      <vmport state='off'/>
+      <smm state='on'>
+        <tseg unit='MiB'>48</tseg>
+      </smm>
+      <ioapic driver='kvm'/>
+      <msrs unknown='ignore'/>
+    </features>
+
+### With Looking Glass
+
+Add to the `<qemu:commandline>` block (needs the `xmlns:qemu` namespace on `<domain>`, see below).
+The first pair enlarges the 64-bit PCI MMIO window in OVMF; the rest adds the shared memory device
+(here backed by `/dev/kvmfr0`, 64 MiB):
+
+    <qemu:arg value='-fw_cfg'/>
+    <qemu:arg value='opt/ovmf/X-PciMmio64Mb,string=65536'/>
+    <qemu:arg value='-device'/>
+    <qemu:arg value='{&apos;driver&apos;:&apos;ivshmem-plain&apos;,&apos;id&apos;:&apos;shmem0&apos;,&apos;memdev&apos;:&apos;looking-glass&apos;}'/>
+    <qemu:arg value='-object'/>
+    <qemu:arg value='{&apos;qom-type&apos;:&apos;memory-backend-file&apos;,&apos;id&apos;:&apos;looking-glass&apos;,&apos;mem-path&apos;:&apos;/dev/kvmfr0&apos;,&apos;size&apos;:67108864,&apos;share&apos;:true}'/>
 
 ## See what it did (optional)
 
@@ -81,7 +156,7 @@ The ROM is written to the repo root. Needs edk2 with the submodules listed in `b
 The prebuilt `AmdIgpuReset.rom` came from edk2 master 34b75da (2026-10-02), GCC 13, RELEASE.
 sha256: `32c704bbc3ebd8b7b37c7f7b27a0d80daedfa73cd58e86dd8f33d88bd7100d97`
 
-## What has been verified (not on real hardware)
+## What has been verified (emulation and unit tests)
 
 - Builds with edk2 master and GCC 13 (`-Werror`).
 - QEMU 8.2 + Ubuntu OVMF 2024.02: the driver loads from the option ROM and the AMD GOP driver
@@ -97,7 +172,7 @@ sha256: `32c704bbc3ebd8b7b37c7f7b27a0d80daedfa73cd58e86dd8f33d88bd7100d97`
   on this iGPU. v0.1 used index 5 and read all-ones. Checked in QEMU against the AHCI
   controller's BAR at config 0x24, and in the unit test with the iGPU's BAR layout.
 
-Not verified: running it against the real iGPU inside the VM.
+Real hardware: tested on a 9950X3D (see Status). Details of what was run and observed are not recorded here.
 
 ## Caveats
 
