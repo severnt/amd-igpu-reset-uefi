@@ -184,4 +184,4 @@ Real hardware: tested on a 9950X3D (see Status). Details of what was run and obs
 
 ## License
 
-See `LICENSE` (MIT). Source files carry an `SPDX-License-Identifier: BSD-2-Clause-Patent` header (edk2 convention).
+See `LICENSE` (MIT). Source files carry an `SPDX-License-Identifier: MIT` header.

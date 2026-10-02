@@ -1,7 +1,7 @@
 ## @file
 #  Resets the AMD Granite Ridge iGPU (1002:13C0) at VM boot. Load from a PCI option ROM.
 #
-#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#  SPDX-License-Identifier: MIT
 ##
 
 [Defines]

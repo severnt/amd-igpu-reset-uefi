@@ -17,7 +17,7 @@
   Log: QEMU debugcon on I/O port 0x402, if present
   (-debugcon file:debug.log -global isa-debugcon.iobase=0x402).
 
-  SPDX-License-Identifier: BSD-2-Clause-Patent
+  SPDX-License-Identifier: MIT
 **/
 
 #include <Uefi.h>
