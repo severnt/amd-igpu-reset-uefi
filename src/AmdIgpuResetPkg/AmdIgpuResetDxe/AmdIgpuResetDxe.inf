@@ -1,0 +1,29 @@
+## @file
+#  Resets the AMD Granite Ridge iGPU (1002:13C0) at VM boot. Load from a PCI option ROM.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 1.27
+  BASE_NAME                      = AmdIgpuResetDxe
+  FILE_GUID                      = 8084661f-161e-4d9b-b808-0364b462a58a
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 0.2
+  ENTRY_POINT                    = AmdIgpuResetEntry
+
+[Sources]
+  AmdIgpuResetDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  BaseLib
+  IoLib
+  PrintLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Protocols]
+  gEfiPciIoProtocolGuid                         ## CONSUMES

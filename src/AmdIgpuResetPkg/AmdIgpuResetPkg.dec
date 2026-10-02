@@ -1,0 +1,9 @@
+## @file
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = AmdIgpuResetPkg
+  PACKAGE_GUID                   = f269ba28-b9fa-436a-adb5-ddc977cdea2d
+  PACKAGE_VERSION                = 0.1

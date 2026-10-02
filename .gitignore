@@ -1,0 +1,4 @@
+AmdIgpuReset+GOP.rom
+*.rom
+!AmdIgpuReset.rom
+Build/
